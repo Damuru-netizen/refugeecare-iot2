@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-heart-pulse me-2"></i>RefugeeCare</h3>
+                <button class="btn-close btn-close-white d-lg-none" id="sidebarCloseBtn"></button>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="active"><i class="fas fa-chart-line"></i><span>Dashboard</span></a></li>
+                <li><a href="#"><i class="fas fa-user-injured"></i><span>Patients</span></a></li>
+                <li><a href="#"><i class="fas fa-bed"></i><span>Beds</span></a></li>
+                <li><a href="#"><i class="fas fa-bell"></i><span>Alerts</span></a></li>
+                <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <nav class="top-navbar">
+                <div class="container-fluid">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-outline-primary d-lg-none" id="sidebarToggleBtn">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <h4 class="mb-0">Healthcare Worker</h4>
+                        <i class="fas fa-user-circle fa-2x text-secondary"></i>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="dashboard-header mt-3">
+                <h2>Healthcare Dashboard</h2>
+                <p class="text-muted">Monitor patients and healthcare operations.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-user-injured"></i>
+                        <h3 id="totalPatients">--</h3>
+                        <p>Patients</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-bed"></i>
+                        <h3 id="totalBeds">--</h3>
+                        <p>Beds Occupied</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-bell"></i>
+                        <h3 id="criticalAlerts">--</h3>
+                        <p>Critical Alerts</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-microchip"></i>
+                        <h3 id="onlineDevices">--</h3>
+                        <p>Devices Online</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="patient-card mt-4">
+                <h4><i class="fas fa-heartbeat me-2"></i>Patient Monitoring</h4>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr><th>Patient</th><th>Bed</th><th>Heart Rate</th><th>Temperature</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="patientsTable">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="alert-panel mt-4">
+                <h5><i class="fas fa-triangle-exclamation me-2"></i>Emergency Alerts</h5>
+                <ul class="mb-0 ps-3" id="emergencyAlerts">
+                    <li>No active alerts</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => sidebar.classList.toggle('show'));
+            document.getElementById('sidebarCloseBtn')?.addEventListener('click', () => sidebar.classList.remove('show'));
+            loadHealthcareDashboard();
+        });
+
+        async function loadHealthcareDashboard() {
+            try {
+                const stats = await loadDashboardStats('healthcare_worker');
+                document.getElementById('totalPatients').textContent = stats.total_patients || 0;
+                document.getElementById('totalBeds').textContent = stats.total_patients || 0;
+                document.getElementById('criticalAlerts').textContent = stats.critical_alerts || 0;
+                document.getElementById('onlineDevices').textContent = stats.online_devices || 0;
+
+                const patients = await loadPatients();
+                const pTable = document.getElementById('patientsTable');
+                if (patients?.length) {
+                    pTable.innerHTML = patients.map(p => `
+                        <tr>
+                            <td>${p.full_name || 'Unknown'}</td>
+                            <td>${p.bed_number || 'N/A'}</td>
+                            <td>${p.heart_rate || '--'} BPM</td>
+                            <td>${p.temperature || '--'}°C</td>
+                            <td><span class="badge ${p.status === 'critical' ? 'bg-danger' : p.status === 'monitor' ? 'bg-warning' : 'bg-success'}">${p.status || 'Stable'}</span></td>
+                        </tr>
+                    `).join('');
+                }
+
+                const critical = patients?.filter(p => p.status === 'critical');
+                const alerts = document.getElementById('emergencyAlerts');
+                if (critical?.length) {
+                    alerts.innerHTML = critical.map(p => `<li>⚠️ Patient ${p.full_name} (Bed ${p.bed_number}) requires urgent attention.</li>`).join('');
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+    </script>
+</body>
+</html>

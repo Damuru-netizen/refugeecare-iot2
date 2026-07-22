@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-heart-pulse me-2"></i>RefugeeCare</h3>
+                <button class="btn-close btn-close-white d-lg-none" id="sidebarCloseBtn"></button>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="active"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                <li><a href="#"><i class="fas fa-heartbeat"></i><span>Health Status</span></a></li>
+                <li><a href="#"><i class="fas fa-bell"></i><span>Alerts</span></a></li>
+                <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <nav class="top-navbar">
+                <div class="container-fluid">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-outline-primary d-lg-none" id="sidebarToggleBtn">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <h4 class="mb-0">Patient Dashboard</h4>
+                        <i class="fas fa-user-circle fa-2x text-secondary"></i>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="dashboard-header mt-3">
+                <h2>Welcome, <span class="text-primary" id="patientName">Patient</span></h2>
+                <p class="text-muted">Real-Time Health Monitoring</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-heart"></i>
+                        <h3 id="heartRate">--</h3>
+                        <p>Heart Rate</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-temperature-three-quarters"></i>
+                        <h3 id="temperature">--</h3>
+                        <p>Temperature</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-lungs"></i>
+                        <h3 id="oxygenLevel">--</h3>
+                        <p>Oxygen Level</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-droplet"></i>
+                        <h3 id="bloodPressure">--</h3>
+                        <p>Blood Pressure</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="patient-card mt-4">
+                <h4><i class="fas fa-id-card me-2"></i>My Information</h4>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Name:</strong> <span id="fullName">--</span></p>
+                        <p><strong>Bed:</strong> <span id="bedNumber">--</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Camp:</strong> <span id="camp">--</span></p>
+                        <p><strong>Status:</strong> <span id="statusBadge" class="badge bg-success">--</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-panel mt-4">
+                <h5><i class="fas fa-bell me-2"></i>Latest Alert</h5>
+                <p class="mb-0" id="latestAlert">All readings are within safe ranges.</p>
+            </div>
+
+            <div class="text-center mt-4">
+                <button class="btn btn-danger btn-lg px-5 py-3 rounded-pill shadow" onclick="emergencyHelp()">
+                    <i class="fas fa-triangle-exclamation me-2"></i>Emergency Help
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => sidebar.classList.toggle('show'));
+            document.getElementById('sidebarCloseBtn')?.addEventListener('click', () => sidebar.classList.remove('show'));
+            loadPatientDashboard();
+        });
+
+        async function loadPatientDashboard() {
+            try {
+                if (!currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const stats = await loadDashboardStats('patient');
+                
+                document.getElementById('patientName').textContent = currentUser.full_name || 'Patient';
+                document.getElementById('heartRate').textContent = stats.heart_rate ? `${stats.heart_rate} BPM` : '--';
+                document.getElementById('temperature').textContent = stats.temperature ? `${stats.temperature}°C` : '--';
+                document.getElementById('oxygenLevel').textContent = stats.oxygen_level ? `${stats.oxygen_level}%` : '--';
+                document.getElementById('bloodPressure').textContent = stats.blood_pressure_systolic ? `${stats.blood_pressure_systolic}/${stats.blood_pressure_diastolic}` : '--';
+                
+                document.getElementById('fullName').textContent = currentUser.full_name || '--';
+                document.getElementById('bedNumber').textContent = currentUser.bed_number || '--';
+                document.getElementById('camp').textContent = currentUser.camp || '--';
+
+                const status = stats.status || 'stable';
+                const badge = document.getElementById('statusBadge');
+                badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                badge.className = `badge ${status === 'critical' ? 'bg-danger' : status === 'monitor' ? 'bg-warning text-dark' : 'bg-success'}`;
+
+                const alert = document.getElementById('latestAlert');
+                if (status === 'critical') {
+                    alert.textContent = '⚠️ URGENT: Seek immediate medical attention!';
+                    alert.className = 'mb-0 text-danger fw-bold';
+                } else if (status === 'monitor') {
+                    alert.textContent = '⚠️ Your vitals are being monitored.';
+                    alert.className = 'mb-0 text-warning fw-bold';
+                } else {
+                    alert.textContent = '✅ All readings are within safe ranges.';
+                    alert.className = 'mb-0 text-success';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function emergencyHelp() {
+            alert('🚨 Emergency alert sent! Medical team is on the way.');
+        }
+    </script>
+</body>
+</html>

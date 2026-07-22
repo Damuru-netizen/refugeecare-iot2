@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-heart-pulse me-2"></i>RefugeeCare</h3>
+                <button class="btn-close btn-close-white d-lg-none" id="sidebarCloseBtn"></button>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="active"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a></li>
+                <li><a href="#"><i class="fas fa-users"></i><span>Users</span></a></li>
+                <li><a href="#"><i class="fas fa-user-doctor"></i><span>Staff</span></a></li>
+                <li><a href="#"><i class="fas fa-microchip"></i><span>IoT Devices</span></a></li>
+                <li><a href="#"><i class="fas fa-file-lines"></i><span>Reports</span></a></li>
+                <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <nav class="top-navbar">
+                <div class="container-fluid">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-outline-primary d-lg-none" id="sidebarToggleBtn">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <h4 class="mb-0">System Administration</h4>
+                        <i class="fas fa-user-circle fa-2x text-secondary"></i>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="dashboard-header mt-3">
+                <h2>Admin Dashboard</h2>
+                <p class="text-muted">Manage healthcare operations and IoT infrastructure.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="row g-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-user-injured"></i>
+                        <h3 id="totalPatients">--</h3>
+                        <p>Total Patients</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-user-doctor"></i>
+                        <h3 id="totalWorkers">--</h3>
+                        <p>Healthcare Workers</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-microchip"></i>
+                        <h3 id="totalDevices">--</h3>
+                        <p>IoT Devices</p>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <i class="fas fa-hospital"></i>
+                        <h3 id="totalCamps">--</h3>
+                        <p>Refugee Camps</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patients Table -->
+            <div class="patient-card mt-4">
+                <h4><i class="fas fa-users me-2"></i>Patient List</h4>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr><th>ID</th><th>Name</th><th>Camp</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="patientsTable">
+                            <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Devices Table -->
+            <div class="patient-card mt-4">
+                <h4><i class="fas fa-microchip me-2"></i>IoT Devices</h4>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr><th>Device ID</th><th>Type</th><th>Camp</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="devicesTable">
+                            <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => sidebar.classList.toggle('show'));
+            document.getElementById('sidebarCloseBtn')?.addEventListener('click', () => sidebar.classList.remove('show'));
+            
+            loadAdminDashboard();
+        });
+
+        async function loadAdminDashboard() {
+            try {
+                const stats = await loadDashboardStats('admin');
+                document.getElementById('totalPatients').textContent = stats.total_patients || 0;
+                document.getElementById('totalWorkers').textContent = stats.total_workers || 0;
+                document.getElementById('totalDevices').textContent = stats.total_devices || 0;
+                document.getElementById('totalCamps').textContent = stats.total_camps || 0;
+
+                const patients = await loadPatients();
+                const pTable = document.getElementById('patientsTable');
+                if (patients?.length) {
+                    pTable.innerHTML = patients.map(p => `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.full_name || 'Unknown'}</td>
+                            <td>${p.camp || 'N/A'}</td>
+                            <td><span class="badge ${p.status === 'critical' ? 'bg-danger' : p.status === 'monitor' ? 'bg-warning' : 'bg-success'}">${p.status || 'Stable'}</span></td>
+                        </tr>
+                    `).join('');
+                }
+
+                const devices = await loadDevices();
+                const dTable = document.getElementById('devicesTable');
+                if (devices?.length) {
+                    dTable.innerHTML = devices.map(d => `
+                        <tr>
+                            <td>${d.device_id}</td>
+                            <td>${d.device_type}</td>
+                            <td>${d.camp}</td>
+                            <td><span class="badge ${d.status === 'online' ? 'bg-success' : 'bg-danger'}">${d.status || 'Offline'}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+    </script>
+</body>
+</html>
